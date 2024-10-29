@@ -1,0 +1,21 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+blinker = "==1.8.2"
+click = "==8.1.7"
+emoji = "==2.14.0"
+flask = "==3.0.3"
+itsdangerous = "==2.2.0"
+pillow = "==11.0.0"
+pilmoji = {ref = "6ff436fe0a28362bd1d411863347face33e3b6ac", git = "git+https://github.com/jay3332/pilmoji"}
+requests = "==2.32.3"
+urllib3 = "==1.26.20"
+werkzeug = "==3.0.6"
+
+[dev-packages]
+
+[requires]
+python_version = "3.12"

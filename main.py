@@ -1,6 +1,9 @@
 from PIL import Image, ImageDraw, ImageFont, ImageEnhance
 from pilmoji import Pilmoji
-from flask import Flask, request, send_file
+# from flask import Flask, request, send_file
+from fastapi import FastAPI, Request, Query
+from fastapi.responses import StreamingResponse
+import uvicorn
 import requests
 import warnings
 import io
@@ -16,7 +19,12 @@ BASE_RV_W_IMAGE = Image.open("images/base-gd-w-rv.png")
 
 BASE_IMAGE = Image.open("images/base.png")
 MPLUS_FONT = ImageFont.truetype("fonts/MPLUSRounded1c-Regular.ttf", size=16)
-BRAND = "TakasumiBOT#7189"
+# BRAND = "https://hisoka.net\nhttp://s.id/MaiSakurajima"
+BRAND = "http://s.id/MaiSakurajima"
+
+def getsize(font, text):
+    left, top, right, bottom = font.getbbox(text)
+    return right - left, bottom 
 
 def drawText(im, ofs, string, font="fonts/MPLUSRounded1c-Regular.ttf", size=16, color=(0, 0, 0, 255), split_len=None, padding=4, disable_dot_wrap=False):
     ImageDraw.Draw(im)
@@ -59,8 +67,8 @@ def drawText(im, ofs, string, font="fonts/MPLUSRounded1c-Regular.ttf", size=16, 
     draw_lines = []
 
     for line in lines:
-        tsize = fontObj.getsize(line)
-
+        tsize = getsize(fontObj, line)
+        print(tsize)
         ofs_y = ofs[1] + dy
         t_height = tsize[1]
 
@@ -99,7 +107,7 @@ def make(name, id, content, icon):
     id_y = name_y + tsize_name[1] + 4
     drawText(img, (890, id_y), id, size=18, color=(180, 180, 180, 255), split_len=45, disable_dot_wrap=True)
 
-    tx.text((1122, 694), BRAND, font=MPLUS_FONT, fill=(120, 120, 120, 255))
+    tx.text((1070, 694), BRAND, font=MPLUS_FONT, fill=(120, 120, 120, 255))
 
     file = io.BytesIO()
     img.save(file, format="PNG", quality=95)
@@ -125,7 +133,7 @@ def colorMake(name, id, content, icon):
     id_y = name_y + tsize_name[1] + 4
     drawText(img, (890, id_y), id, size=18, color=(180, 180, 180, 255), split_len=45, disable_dot_wrap=True)
 
-    tx.text((1122, 694), BRAND,font=MPLUS_FONT, fill=(120, 120, 120, 255))
+    tx.text((1070, 694), BRAND, font=MPLUS_FONT, fill=(120, 120, 120, 255))
 
     file = io.BytesIO()
     img.save(file, format="PNG", quality=95)
@@ -205,7 +213,7 @@ def whiteMake(name, id, content, icon):
     id_y = name_y + tsize_name[1] + 4
     drawText(img, (890, id_y), id, size=18, color=(90, 90, 90, 255), split_len=45, disable_dot_wrap=True)
 
-    tx.text((1122, 694), BRAND, font=MPLUS_FONT, fill=(110, 110, 110, 215))
+    tx.text((1070, 694), BRAND, font=MPLUS_FONT, fill=(120, 120, 120, 255))
 
     file = io.BytesIO()
     img.save(file, format="PNG", quality=95)
@@ -238,46 +246,31 @@ def reverseWhiteMake(name, id, content, icon):
     file.seek(0)
     return file
 
-app = Flask(__name__)
-
-@app.route("/", methods=["GET"])
-def main():
-    type = request.args.get("type")
-    name = request.args.get("name") or "SAMPLE",
-    id = request.args.get("id") or "0000000000000000000",
-    content = request.args.get("content") or "Make it a Quote",
-    icon = request.args.get("icon") or "https://cdn.discordapp.com/embed/avatars/0.png"
-
+app = FastAPI()
+@app.get("/")
+async def main(
+    type: str = Query(None),
+    name: str = Query("SAMPLE"),
+    id: str = Query(""),
+    content: str = Query("Make it a Quote"),
+    icon: str = Query("https://cdn.discordapp.com/embed/avatars/0.png")
+):
     if type == "color":
-        return send_file(
-            colorMake(name[0], id[0], content, icon),
-            mimetype="image/png"
-        )
+        image_io = colorMake(name, id, content, icon)
     elif type == "reverse":
-        return send_file(
-            reverseMake(name[0], id[0], content, icon),
-            mimetype="image/png"
-        )
+        image_io = reverseMake(name, id, content, icon)
     elif type == "reverseColor":
-        return send_file(
-            reverseColorMake(name[0], id[0], content, icon),
-            mimetype="image/png"
-        )
+        image_io = reverseColorMake(name, id, content, icon)
     elif type == "white":
-        return send_file(
-            whiteMake(name[0], id[0], content, icon),
-            mimetype="image/png"
-        )
+        image_io = whiteMake(name, id, content, icon)
     elif type == "reverseWhite":
-        return send_file(
-            reverseWhiteMake(name[0], id[0], content, icon),
-            mimetype="image/png"
-        )
+        image_io = reverseWhiteMake(name, id, content, icon)
     else:
-        return send_file(
-            make(name[0], id[0], content, icon),
-            mimetype="image/png"
-        )
+        image_io = make(name, id, content, icon)
+
+    image_io.seek(0)
+
+    return StreamingResponse(image_io, media_type="image/png")
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=3000)
+    uvicorn.run(app, host="0.0.0.0", port=3000)
